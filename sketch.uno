@@ -27,6 +27,8 @@
  http://www.arduino.cc/en/Tutorial/AnalogInput
 
  */
+//#define DEBUG
+
 
 #define STATE_ERROR_CABLE    -2
 #define STATE_ERROR          -1
@@ -47,7 +49,7 @@ const int pumpPin = 7;            // select the pin for the LED
 
 const int countChecks           = 3;        // Count checks water line
 const int delayBetweenChecks    = 100;      // Delay between checks water line
-const int minLevelSignal        = 20;       // Min level singna on pin
+const int minLevelSignal        = 100;       // Min level singna on pin
 const int timeWaitWaterCheck    = 3000;     // Time wait between checks water line
 const unsigned long maxWaitPump = 3600000;    // Max time work pump
 
@@ -55,12 +57,12 @@ const unsigned long maxWaitPump = 3600000;    // Max time work pump
 int state = 0;
 
 void setup() {
-    // Debug
+    #ifdef DEBUG
     Serial.begin(9600);
+    #endif
 
     pinMode(lampPin, OUTPUT);
     pinMode(pumpPin, OUTPUT);
-    //pinMode(supPin, OUTPUT);
     
     pinMode(minPin, INPUT);
     pinMode(maxPin, INPUT);
@@ -86,7 +88,9 @@ void loop() {
             do_error_cable();
             break;
     }
-    print_state(state);
+    #ifdef DEBUG
+    printState(state);
+    #endif
 }
 
 int do_error_cable(){
@@ -132,7 +136,9 @@ int do_pumped(){
     pump_on();
     unsigned long currentWait = 0;
     while(currentWait < maxWaitPump){
-        //print_state(state);
+        #ifdef DEBUG
+        printState(state);
+        #endif
         // Check water level
         if(getLevel() == LEVEL_NONE){
             pump_off();
@@ -165,16 +171,23 @@ void pump_off(){
 int getLevel(){
     int minVal = 0;
     int maxVal = 0;
+    int minTmp = 0;
+    int maxTmp = 0;
     for(int i = 0; i < countChecks; i++){
         analogWrite(supPin, 255);
-        minVal = minVal + analogRead(minPin);
-        maxVal = maxVal + analogRead(maxPin);
+        minTmp = analogRead(minPin);
+        maxTmp = analogRead(maxPin);
+        minVal = minVal + minTmp;
+        maxVal = maxVal + maxTmp;
         analogWrite(supPin, 0);
+        #ifdef DEBUG
+        printVals(minTmp, maxTmp);
+        #endif
         delay(delayBetweenChecks);
     }
     minVal = minVal / countChecks;
     maxVal = maxVal / countChecks;
-    
+
     if(minVal < minLevelSignal && maxVal < minLevelSignal){
         return LEVEL_NONE;
     } else if(minVal >= minLevelSignal && maxVal < minLevelSignal){
@@ -184,9 +197,17 @@ int getLevel(){
     }
     return LEVEL_UNKNOWN;
 }
+ 
+#ifdef DEBUG
+void printVals(int min, int max){
+  Serial.print("Min: ");
+  Serial.print(min);
+  Serial.print(" Max: ");
+  Serial.println(max);
+}
 
 // Debug: Print current state to COM port
-void print_state(int state){
+void printState(int state){
     switch(state){
         case STATE_WAIT_WATER:
             Serial.println("State STATE_WAIT_WATER");
@@ -202,3 +223,4 @@ void print_state(int state){
             break;
     }
 }
+#endif
