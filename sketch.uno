@@ -20,7 +20,7 @@
   This example code is in the public domain.
   http://www.arduino.cc/en/Tutorial/AnalogInput
 */
-#define DEBUG
+//#define DEBUG
 
 
 #define STATE_ERROR_CABLE    -2
